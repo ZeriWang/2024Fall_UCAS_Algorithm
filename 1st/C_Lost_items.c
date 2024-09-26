@@ -1,59 +1,62 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
+#include <limits.h>
 
-#define MAX_N 30
-#define MAX_D 30000000000LL
+void solve_case(int N, int D, int weights[]) {
+    int dp[D + 1];
+    int count[D + 1];
 
-bool dp[MAX_N + 1][MAX_D + 1];
-int count[MAX_D + 1];
+    // 初始化 dp 和 count 数组
+    for (int i = 0; i <= D; i++) {
+        dp[i] = INT_MAX; // 设置为无穷大
+        count[i] = 0;    // 初始化组合数量为 0
+    }
 
-void solve(int N, long long D, int *weights, int case_num) {
-    memset(dp, 0, sizeof(dp));
-    memset(count, 0, sizeof(count));
-    dp[0][0] = true;
-    count[0] = 1;
+    dp[0] = 0;   // 0重量需要0个物品
+    count[0] = 1; // 只有一种方式达到0重量
 
-    for (int i = 1; i <= N; i++) {
-        for (long long j = D; j >= weights[i - 1]; j--) {
-            if (dp[i - 1][j - weights[i - 1]]) {
-                dp[i][j] = true;
-                count[j] += count[j - weights[i - 1]];
+    // 动态规划更新
+    for (int i = 0; i < N; i++) {
+        int weight = weights[i];
+        for (int w = D; w >= weight; w--) {
+            if (dp[w - weight] + 1 < dp[w]) {
+                dp[w] = dp[w - weight] + 1;
+                count[w] = count[w - weight];
+            } else if (dp[w - weight] + 1 == dp[w]) {
+                count[w] += count[w - weight];
             }
         }
     }
 
-    if (!dp[N][D]) {
-        printf("Case #%d: IMPOSSIBLE\n", case_num);
+    // 输出结果
+    if (dp[D] == INT_MAX) {
+        printf("IMPOSSIBLE\n");
+    } else if (count[D] > 1) {
+        printf("AMBIGUOUS\n");
     } else {
-        int min_items = N + 1;
-        for (int i = 1; i <= N; i++) {
-            if (dp[i][D]) {
-                min_items = i;
-                break;
-            }
-        }
-        if (count[D] > 1) {
-            printf("Case #%d: AMBIGIOUS\n", case_num);
-        } else {
-            printf("Case #%d: %d\n", case_num, min_items);
-        }
+        printf("%d\n", dp[D]);
     }
 }
 
 int main() {
-    int T, N;
-    long long D;
-    scanf("%d", &T);
-    for (int t = 1; t <= T; t++) {
-        scanf("%d %lld", &N, &D);
-        int *weights = (int *)malloc(N * sizeof(int));
-        for (int i = 0; i < N; i++) {
-            scanf("%d", &weights[i]);
+    int T;
+    scanf("%d", &T); // 读取测试用例数量
+    for (int case_num = 1; case_num <= T; case_num++) {
+        int N, D, i = 0;
+        char c;
+        scanf("%d %d", &N, &D); // 读取物品数量和目标重量
+        int weights[N];
+        
+        c = getchar(); // 读取换行符
+
+        while((c = getchar()) != '\n') {
+            if (c == ' ') {
+                continue;
+            }
+            weights[i++] = c - '0';
         }
-        solve(N, D, weights, t);
-        free(weights);
+
+        printf("Case #%d: ", case_num);
+        solve_case(N, D, weights); // 解决当前测试用例
     }
     return 0;
 }

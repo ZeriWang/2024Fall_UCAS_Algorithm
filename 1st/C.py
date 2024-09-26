@@ -1,37 +1,29 @@
-def solve(N, D, weights, case_num):
-    dp = {0: (0, 1)}  # 初始状态，和为0的组合数量为1，物品数量为0
+def solve_case(N, D, weights):
+    dp = [float('inf')] * (D + 1)
+    count = [0] * (D + 1)
+    
+    dp[0] = 0  # 0 weight requires 0 items
+    count[0] = 1  # 1 way to pick nothing to make 0 weight
 
     for weight in weights:
-        new_dp = dp.copy()
-        for current_sum in dp:
-            new_sum = current_sum + weight
-            new_count = dp[current_sum][1]
-            new_items = dp[current_sum][0] + 1
-            if new_sum not in new_dp:
-                new_dp[new_sum] = (new_items, new_count)
-            else:
-                if new_dp[new_sum][0] == new_items:
-                    new_dp[new_sum] = (new_items, new_dp[new_sum][1] + new_count)
-                elif new_dp[new_sum][0] > new_items:
-                    new_dp[new_sum] = (new_items, new_count)
-        dp = new_dp
+        for w in range(D, weight - 1, -1):
+            if dp[w - weight] + 1 < dp[w]:
+                dp[w] = dp[w - weight] + 1
+                count[w] = count[w - weight]
+            elif dp[w - weight] + 1 == dp[w]:
+                count[w] += count[w - weight]
 
-    if D not in dp:
-        print(f"Case #{case_num}: IMPOSSIBLE")
+    if dp[D] == float('inf'):
+        return "IMPOSSIBLE"
+    elif count[D] > 1:
+        return "AMBIGUOUS"
     else:
-        min_items = dp[D][0]
-        count = dp[D][1]
-        if count > 1:
-            print(f"Case #{case_num}: AMBIGIOUS")
-        else:
-            print(f"Case #{case_num}: {min_items}")
+        return dp[D]
 
 def main():
     T = int(input())
-    for t in range(1, T + 1):
+    for case_num in range(1, T + 1):
         N, D = map(int, input().split())
         weights = list(map(int, input().split()))
-        solve(N, D, weights, t)
-
-if __name__ == "__main__":
-    main()
+        result = solve_case(N, D, weights)
+        print(f"Case #{case_num}: {result}")
