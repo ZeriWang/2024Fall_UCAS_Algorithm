@@ -1,76 +1,145 @@
-#include <bits/stdc++.h> // 包含所有标准库头文件
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <vector>
+#define MAXN 70005 
+#define int long long
 using namespace std;
 
-int n, k, a, b, l, st[100001], top, fa[100001], dep[100001], ans;
-bool leaf[100001], flag[100001];
-vector<int> tree[100001]; // 定义树的邻接表
+vector<int>G[MAXN]; // 邻接表表示的图
+int n, sum, root, tree_size[MAXN], son[MAXN]; // 全局变量
+bool used[MAXN]; // 标记节点是否已被访问
 
-// 初始化函数
-void init()
-{
-    ans = 0; // 重置答案
-    top = 0; // 重置栈顶指针
-    fill(st, st + n + 1, 0); // 重置栈
-    fill(leaf, leaf + n + 1, 0); // 重置叶子节点标志
-    fill(flag, flag + n + 1, 0); // 重置标志
+// 获取树的重心节点
+void getroot(int u, int fa) {
+    tree_size[u] = 1; son[u] = 0;
+    for (int i = 0; i < G[u].size(); i++) {
+        int v = G[u][i];
+        if (v == fa || used[v]) continue;
+        getroot(v, u);
+        tree_size[u] += tree_size[v];
+        son[u] = max(son[u], tree_size[v]);
+    }
+    son[u] = max(son[u], sum - tree_size[u]);
+    if (son[u] < son[root]) root = u;
 }
 
-// 深度优先搜索1
-void dfs1 (int i, int fr)
-{
-    st[++top] = i; // 将当前节点压入栈中
-    if (tree[i].size() == 1 && i != 1) // 如果当前节点是叶子节点且不是根节点
-    {
-        flag[st[top / 2 + 1]] = 1; // 标记栈中间的节点
-        top--; // 弹出当前节点
-        return;
-    }
-    for (int k = 0; k < tree[i].size(); k++) // 遍历当前节点的所有子节点
-    {
-        int now = tree[i][k];
-        if (now != fr) // 如果子节点不是父节点
-            dfs1 (now, i); // 递归调用dfs1
-    }
-    top--; // 弹出当前节点
-}
+int g[MAXN], dep[MAXN], du[MAXN]; // 全局变量
 
-// 深度优先搜索2
-void dfs2 (int i, int fr)
-{
-    if (flag[i]) // 如果当前节点被标记
-    {
-        ans++; // 增加答案计数
-        return;
-    }
-    for (int k = 0; k < tree[i].size(); k++) // 遍历当前节点的所有子节点
-    {
-        int now = tree[i][k];
-        if (now != fr) // 如果子节点不是父节点
-            dfs2 (now, i); // 递归调用dfs2
+// 第一次深度优先搜索，计算每个节点到最近叶子节点的距离
+void dfs1(int u, int father, int depth) {
+    dep[u] = depth;
+    g[u] = 2147483647;
+    if (du[u] == 1) g[u] = 0;
+    for (int i = 0; i < G[u].size(); i++) {
+        int v = G[u][i];
+        if (v == father) continue;
+        dfs1(v, u, depth + 1);
+        g[u] = min(g[u], g[v] + 1);
     }
 }
 
-int main()
-{
-    cin >> n; // 输入节点数
-
-    for (int i = 1; i < n; i++) // 输入树的边
-    {
-        cin >> a >> b;
-        tree[a].push_back (b); // 添加边 a-b
-        tree[b].push_back (a); // 添加边 b-a
+// 第二次深度优先搜索，更新每个节点到最近叶子节点的距离
+void dfs2(int u, int father) {
+    for (int i = 0; i < G[u].size(); i++) {
+        int v = G[u][i];
+        if (v == father) continue;
+        g[v] = min(g[v], g[u] + 1);
+        dfs2(v, u);
     }
+}
 
-    for(int k = 1; k <= n; k++) // 遍历每个节点
-    {
-        fa[k] = 0; // 重置父节点数组
-        
-        dfs1 (k, 0); // 从节点 k 开始进行第一次深度优先搜索
-        dfs2 (k, 0); // 从节点 k 开始进行第二次深度优先搜索
-        cout << ans << "\n"; // 输出答案
+int d[MAXN]; // 全局变量
 
-        init(); // 初始化
+// 计算每个节点到根节点的距离
+void getdistance(int u, int father, int cur) {
+    d[u] = cur;
+    for (int i = 0; i < G[u].size(); i++) {
+        int v = G[u][i];
+        if (v == father || used[v]) continue;
+        getdistance(v, u, cur + 1);
     }
-    
+}
+
+struct node {
+    int dg, deg;
+    bool operator<(const node a) const {
+        return dg < a.dg;
+    }
+} q[MAXN]; // 节点结构体
+
+struct bond {
+    int id, dis;
+    bool operator<(const bond a) const {
+        return dis < a.dis;
+    }
+} p[MAXN]; // 边结构体
+
+int ans[MAXN]; // 结果数组
+
+int tot = 0; // 全局变量
+
+// 将节点信息添加到数组中
+void addin(int u, int father) {
+    p[++tot] = (bond){u, d[u]};
+    q[tot] = (node){g[u] - d[u], 2 - du[u]};
+    for (int i = 0; i < G[u].size(); i++) {
+        int v = G[u][i];
+        if (v == father || used[v]) continue;
+        addin(v, u);
+    }
+}
+
+// 计算每个节点的答案
+void calc(int u, int father, int type) {
+    tot = 0;
+    addin(u, father);
+    sort(p + 1, p + tot + 1);
+    sort(q + 1, q + tot + 1);
+    int Sum = 0, cursor = 0;
+    for (int i = 1; i <= tot; i++) {
+        while (cursor < tot && p[i].dis >= q[cursor + 1].dg) {
+            cursor++;
+            Sum += q[cursor].deg;
+        }
+        ans[p[i].id] += type * Sum;
+    }
+}
+
+// 递归解决问题
+void solve(int u) {
+    used[u] = 1;
+    getdistance(u, 0, 0);
+    calc(u, 0, 1);
+    for (int i = 0; i < G[u].size(); i++) {
+        int v = G[u][i];
+        if (used[v]) continue;
+        calc(v, u, -1);
+        sum = tree_size[v];
+        root = 0;
+        getroot(v, u);
+        solve(root);
+    }
+}
+
+signed main() {
+    cin >> n;
+    for (int i = 1; i < n; i++) {
+        int x, y;
+        cin >> x >> y;
+        G[x].push_back(y);
+        G[y].push_back(x);
+        du[x]++; du[y]++;
+    }
+    dfs1(1, 0, 1); dfs2(1, 0);
+    root = 0; sum = son[0] = n; getroot(1, 0);
+    solve(root);
+    for (int i = 1; i <= n; i++)
+        if (du[i] == 1) ans[i] = 1;
+    for (int i = 1; i <= n; i++)
+        cout << ans[i] << endl;
     return 0;
 }
